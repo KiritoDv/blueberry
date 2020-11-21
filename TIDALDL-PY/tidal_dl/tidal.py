@@ -193,14 +193,14 @@ class TidalAPI(object):
         msg, data = self.__get__('tracks/' + str(id))
         return msg, dictToModel(data, Track())
 
-    def searchSong(self, value, limit=50):
+    def searchSong(self, field, value, limit=50):
         tracks = []
-        msg, data = self.__get__('search/tracks', params={
+        msg, data = self.__get__('search/' + field + 's', params={
             'query': value,
             'limit': limit,
         })
-        for item in data["items"]:
-            tracks.append(dictToModel(item, Track()))
+        for item in data["items"]:            
+            tracks.append(dictToModel(item, Track() if field == 'track' else Album() if field == 'album' else Playlist()))
         return msg, tracks
 
     def getVideo(self, id):

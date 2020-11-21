@@ -99,6 +99,20 @@ class Printf(object):
         print("====================================================")
 
     @staticmethod
+    def searchTypes():
+        LANG = getLang()
+        print("====================================================")
+        tb = prettytable.PrettyTable()
+        tb.field_names = [LANG.CHOICE, "SEARCH BY"]
+        tb.align = 'l'
+        tb.set_style(prettytable.PLAIN_COLUMNS)
+        tb.add_row([green(LANG.CHOICE_ENTER + " '0':"), "Track"])
+        tb.add_row([green(LANG.CHOICE_ENTER + " '1':"), "Album"])
+        tb.add_row([green(LANG.CHOICE_ENTER + " '2':"), "Playlist"])
+        print(tb)
+        print("====================================================")
+
+    @staticmethod
     def enter(string):
         myprint(string, TextColor.Yellow, None)
         ret = input("")

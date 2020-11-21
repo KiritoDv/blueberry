@@ -32,6 +32,7 @@ from tidal_dl.decryption import decrypt_security_token
 from tidal_dl.decryption import decrypt_file
 import miniaudio
 from datetime import datetime
+from pynput import keyboard
 
 API = TidalAPI()
 
@@ -342,20 +343,58 @@ def __downloadTrack__(conf: Settings, track, album=None, playlist=None):
     except Exception as e:
         Printf.err("Download failed! " + track.title + ' (' + str(e) + ')')
 
-def songCallback(song, count, length, progress, desc):
+def genVolume(vol):
+    tmp = ""
+    for vol in range(0, round(abs(vol) / 10)):
+        tmp = tmp + "▓"
+    return tmp
+
+def playCallback(song, count, length, progress, desc):
     progress.setCurCount(count)
     progress.desc = datetime.fromtimestamp(round((length - count) / 10)).strftime("%M:%S").lstrip("0").replace(" 0", " ")
-    progress.desc = f"{progress.desc.strip()} {desc}";
+    progress.desc = f"{progress.desc.strip()} {desc}  Vol: [{genVolume(100-(song.volModifier * 2))}]                                                           ";
 
-def playSong(track, path):    
+def stopCallback(keyl, path):
+    os.remove(path)
+    keyl.stop()
+    os.system('clear')
 
-    desc = f"Playing ({track.title} - {track.artist.name})"
+def on_key(song, key):
+    if(key == 'dvol'):
+        song.volModifier += 5
+    if(key == 'uvol'):
+        song.volModifier -= 5
+    if(key == 'play'):
+        if song.is_paused: song.play()
+        else: song.pause()
+    if(key == 'stop'):
+        song.stop()
+
+def playSong(track, path):
+        
     song = Song(path)
+
+    desc = f"Playing ({track.title} - {track.album.title})"
+    
+    keyl = keyboard.GlobalHotKeys({
+        "<cmd_l>+<alt>+o": lambda: on_key(song, 'play'),
+        '<cmd_l>+<alt>+p': lambda: on_key(song, 'stop'), 
+        '<cmd_l>+<alt>+[': lambda: on_key(song, 'dvol'),
+        '<cmd_l>+<alt>+]': lambda: on_key(song, 'uvol'),
+    })        
+
+    keyl.start()
+
     chunks = make_chunks(song.seg, 100)
     progress = ProgressTool(len(chunks), 15)
-    song.callback = lambda count: songCallback(song, count, len(chunks), progress, desc)
-    print("[UV Player]\n")    
+    song.playcb = lambda count: playCallback(song, count, len(chunks), progress, desc)
+    song.stopcb = lambda x: stopCallback(keyl, path)
+    
     song.play()
+    os.system('clear')
+    while not song.canFinish():
+        pass
+
 
 def __downloadCover__(conf, album):
     if album == None:
@@ -372,19 +411,19 @@ def __album__(conf, obj):
     if not isNull(msg):
         Printf.err(msg)
         return
-    if conf.saveCovers:
-        __downloadCover__(conf, obj)
+    # if conf.saveCovers:
+    #    __downloadCover__(conf, obj)
     for item in tracks:
         __downloadTrack__(conf, item, obj)
-    for item in videos:
-        __downloadVideo__(conf, item, obj)
+    # for item in videos:
+    #    __downloadVideo__(conf, item, obj)
 
 
 def __track__(conf, obj):
     Printf.track(obj)
     msg, album = API.getAlbum(obj.album.id)
-    if conf.saveCovers:
-        __downloadCover__(conf, album)
+    # if conf.saveCovers:
+    #     __downloadCover__(conf, album)
     __downloadTrack__(conf, obj, album)
 
 
@@ -414,8 +453,8 @@ def __playlist__(conf, obj):
         mag, album = API.getAlbum(item.album.id)
         item.trackNumberOnPlaylist = index + 1
         __downloadTrack__(conf, item, album, obj)
-    for item in videos:
-        __downloadVideo__(conf, item, None)
+    # for item in videos:
+    #    __downloadVideo__(conf, item, None)
 
 
 def __file__(user, conf, string):
@@ -433,17 +472,33 @@ def __file__(user, conf, string):
             continue
         start(user, conf, item)
 
-def searchTrack(user, lang, song, conf):
+def searchTrack(user, lang, field, song, conf):
     __loadAPI__(user)
-    msg, obj = API.searchSong(song, limit=10)
+    msg, obj = API.searchSong(field, song, limit=10)
 
-    for track in obj:        
-        print(green(f"Enter [{obj.index(track)}]: ") + f"{track.title} - {track.artist.name} - {track.album.title}")
-        
-    choice = int(Printf.enter(lang))
-    if(choice >= 0 and choice < len(obj)):
-        print(f"Downlaoding [{obj[choice].id}] ...");
-        __track__(conf, obj[choice])
+    for item in obj:
+        if field == 'track':
+            print(green(f"Enter [{obj.index(item)}]: ") + f"{item.title} - {item.artist.name} - {item.album.title}")
+        elif field == 'album':
+            print(green(f"Enter [{obj.index(item)}]: ") + f"{item.title} - {item.artist.name}")
+        else:
+            print(green(f"Enter [{obj.index(item)}]: ") + f"{item.title} - {item.numberOfTracks} Songs")
+    
+    try:
+        choice = int(Printf.enter(lang))
+        if(choice >= 0 and choice < len(obj)):
+            if field == 'track':
+                __track__(conf, obj[choice])
+            elif field == 'album':
+                __album__(conf, obj[choice])
+            else:
+                __playlist__(conf, obj[choice])
+        else:
+            os.system('clear')
+            Printf.err("Invalid option!")
+    except ValueError:
+        os.system('clear')
+        Printf.err("Invalid option!")
 
 
 def start(user, conf, string):

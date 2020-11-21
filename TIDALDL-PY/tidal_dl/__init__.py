@@ -16,6 +16,7 @@ import ssl
 import sys
 import getopt
 import time
+import re
 
 from aigpy.stringHelper import isNull
 from aigpy.pathHelper import mkdirs
@@ -248,18 +249,31 @@ def main():
 
     while True:
         Printf.choices()
-        choice = Printf.enter(LANG.PRINT_ENTER_CHOICE)
-        if choice == "0":
+        raw = Printf.enter(LANG.PRINT_ENTER_CHOICE).strip();
+                
+        choice = int(re.sub('[^0-9]','', raw))
+        if choice == 0:
             return
-        elif choice == "1":
+        elif choice == 1:
             checkLogin()
-        elif choice == "2":
+        elif choice == 2:
             changeSettings()
-        elif choice == "3":
+        elif choice == 3:
             checkLogout()
-        elif choice == "4":
-            song = Printf.enter("Enter the song name: ")
-            searchTrack(TOKEN, LANG.PRINT_ENTER_CHOICE, song, CONF)
+        elif choice == 4:
+            Printf.searchTypes()
+
+            searchRaw = Printf.enter(LANG.PRINT_ENTER_CHOICE).strip();
+                
+            searchType = int(re.sub('[^0-9]','', searchRaw))
+            field = "track" if searchType == 0 else 'album' if searchType == 1 else 'playlist'                
+
+            if searchType >= 0 and searchType <= 2:
+                song = Printf.enter("Enter the song name: ")
+                searchTrack(TOKEN, LANG.PRINT_ENTER_CHOICE, field, song, CONF)
+            else:
+                os.system('clear')
+                Printf.err("Invalid option!")
         else:
             start(TOKEN, CONF, choice)
 
