@@ -1,65 +1,50 @@
 #!/usr/bin/env python
 
 #-*- coding: utf-8 -*-
-from aigpy.progressHelper import ProgressTool
-from pydub import AudioSegment
-from pydub.utils import make_chunks
-from pyaudio import PyAudio
-from threading import Thread
+import strawberry
 
-
-class Song(Thread):     
+class Strawberry():     
 
     def __init__(self, f, *args, **kwargs):
-        self.volModifier = 0
-        self.chunk_count = 0
-        self.stream = None
-        self.seg = AudioSegment.from_file(f)
+        self.volume = 0        
+        self.file = f        
         self.playcb = lambda x: x
         self.stopcb = lambda x: x
-        self.is_paused = True
-        self.p = PyAudio()
-        Thread.__init__(self, *args, **kwargs)        
-        self.start()
     
-    def pause(self):
-        self.is_paused = True
+    def load(self):
+        strawberry.load_player(path=self.file)
 
     def play(self):
-        self.is_paused = False
+        strawberry.set_play_status(True);
 
-    def __get_stream(self):
-        return self.p.open(format=self.p.get_format_from_width(self.seg.sample_width),
-                           channels=self.seg.channels,
-                           rate=self.seg.frame_rate,
-                           output=True)
+    def pause(self):
+        strawberry.set_play_status(False);
+
+    def is_paused(self):
+        return not strawberry.paused()
 
     def stop(self):
-        if(self.stream == None):
-            return
-        self.chunk_count = len(self.chunks)        
+        strawberry.close_player()
+
+    def get_volume(self):
+        return self.volume
+
+    def set_volume(self, vol):
+        self.volume = vol
+        strawberry.set_volume(vol);
 
     def canFinish(self):
-        return self.is_paused and self.chunk_count >= len(self.chunks)
+        return not strawberry.running();
 
-    def run(self):
-        self.stream = self.__get_stream()
-        
-        self.chunks = make_chunks(self.seg, 100)       
-        
-        while self.chunk_count < len(self.chunks):
-            if not self.is_paused:
-                chunk_data = (self.chunks[self.chunk_count]).apply_gain(-self.volModifier)
-                data = chunk_data._data
-                self.chunk_count += 1
-                self.playcb(self.chunk_count)
-            else:
-                free = self.stream.get_write_available()
-                data = chr(0)*free
-            self.stream.write(data)
-        
+    def getMaxFrames(self):
+        return strawberry.get_max_frames()
 
-        self.stream.stop_stream()
-        self.p.terminate()
+    def start(self):
+        
+        strawberry.init_player()
+        self.volume = strawberry.get_volume()
+
+        while strawberry.running():
+            self.playcb(strawberry.get_current_frames())
+        self.stop()
         self.stopcb(0)
-        self.is_paused = True    

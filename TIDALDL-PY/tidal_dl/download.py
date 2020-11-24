@@ -8,29 +8,28 @@
 @Contact :   yaronhuang@foxmail.com
 @Desc    :   
 '''
+from itertools import count
+from math import floor
 import os
 from aigpy.cmdHelper import green, red, yellow
 
 import aigpy.m3u8Helper as m3u8Helper
-from aigpy.progressHelper import ProgressTool
 from aigpy.tagHelper import TagTool
 from aigpy.netHelper import downloadFile, downloadFileMultiThread
 from aigpy.stringHelper import isNull, getSubOnlyEnd
 from aigpy.pathHelper import replaceLimitChar, getFileName, remove
 from aigpy.fileHelper import getFileContent, getFileSize
 import aigpy.netHelper as netHelper
-from miniaudio import ThreadPriority
 
-from pydub.utils import make_chunks
-from tidal_dl.player import Song
+from tidal_dl.player import Strawberry
 
 from tidal_dl.settings import Settings
 from tidal_dl.tidal import TidalAPI
-from tidal_dl.enum import Type, AudioQuality, VideoQuality
+from tidal_dl.enum import Type, AudioQuality
 from tidal_dl.printf import Printf
 from tidal_dl.decryption import decrypt_security_token
 from tidal_dl.decryption import decrypt_file
-import miniaudio
+import sys
 from datetime import datetime
 from pynput import keyboard
 
@@ -343,16 +342,28 @@ def __downloadTrack__(conf: Settings, track, album=None, playlist=None):
     except Exception as e:
         Printf.err("Download failed! " + track.title + ' (' + str(e) + ')')
 
-def genVolume(vol):
+def genVolume(vol, length):
     tmp = ""
-    for vol in range(0, round(abs(vol) / 10)):
-        tmp = tmp + "▓"
+    for i in range(0, length):        
+        tmp += ("■" if(i < round(vol * length, 2)) else "□")
     return tmp
 
-def playCallback(song, count, length, progress, desc):
-    progress.setCurCount(count)
-    progress.desc = datetime.fromtimestamp(round((length - count) / 10)).strftime("%M:%S").lstrip("0").replace(" 0", " ")
-    progress.desc = f"{progress.desc.strip()} {desc}  Vol: [{genVolume(100-(song.volModifier * 2))}]                                                           ";
+def genProgressBar(current, max, length):
+    tmp = ""
+    for i in range(0, length):
+        tmp += ("■" if(i < length - ((current / max) * length)) else "□")
+    return tmp
+
+
+def playCallback(song, count, length, progress, info):
+    progress = genProgressBar(count, length, 30);
+    vol = round(song.get_volume(), 2)    
+    start = datetime.fromtimestamp(round((length - count) / 44)).strftime("%M:%S")
+    finish = datetime.fromtimestamp(round((length) / 44)).strftime("%M:%S")
+    desc = f"{start} [{progress}] {finish} Vol: [{genVolume(vol, 10)}] {round(100 * vol)}%            ";
+
+    sys.stdout.write("\r" + desc)
+    sys.stdout.flush()    
 
 def stopCallback(keyl, path):
     os.remove(path)
@@ -361,20 +372,25 @@ def stopCallback(keyl, path):
 
 def on_key(song, key):
     if(key == 'dvol'):
-        song.volModifier += 5
+        vol = round(song.get_volume(), 2)
+        if(vol > 0):
+            song.set_volume(vol - 0.1)
     if(key == 'uvol'):
-        song.volModifier -= 5
+        vol = round(song.get_volume(), 2)
+        if(vol <= 0.9):
+            song.set_volume(vol + 0.1)
     if(key == 'play'):
-        if song.is_paused: song.play()
+        if song.is_paused(): song.play()
         else: song.pause()
     if(key == 'stop'):
         song.stop()
 
 def playSong(track, path):
         
-    song = Song(path)
+    song = Strawberry(path)
+    song.load()
 
-    desc = f"Playing ({track.title} - {track.album.title})"
+    desc = f"({track.title} - {track.album.title})"
     
     keyl = keyboard.GlobalHotKeys({
         "<cmd_l>+<alt>+o": lambda: on_key(song, 'play'),
@@ -384,16 +400,22 @@ def playSong(track, path):
     })        
 
     keyl.start()
-
-    chunks = make_chunks(song.seg, 100)
-    progress = ProgressTool(len(chunks), 15)
-    song.playcb = lambda count: playCallback(song, count, len(chunks), progress, desc)
-    song.stopcb = lambda x: stopCallback(keyl, path)
     
-    song.play()
+    max_frames = round(song.getMaxFrames() / 1000)
+
+    song.playcb = lambda count: playCallback(song, round(abs((count + 1) / 1000)), max_frames, None, desc)
+    song.stopcb = lambda x: stopCallback(keyl, path)
+
     os.system('clear')
-    while not song.canFinish():
-        pass
+
+    ml = 65;
+
+    for cw in range(0, round(ml / 2 - len(desc) / 2)):
+        print(" ", end='')
+
+    print(f"{desc}\n")
+
+    song.start()    
 
 
 def __downloadCover__(conf, album):
@@ -474,6 +496,7 @@ def __file__(user, conf, string):
 
 def searchTrack(user, lang, field, song, conf):
     __loadAPI__(user)
+
     msg, obj = API.searchSong(field, song, limit=10)
 
     for item in obj:
@@ -482,8 +505,8 @@ def searchTrack(user, lang, field, song, conf):
         elif field == 'album':
             print(green(f"Enter [{obj.index(item)}]: ") + f"{item.title} - {item.artist.name}")
         else:
-            print(green(f"Enter [{obj.index(item)}]: ") + f"{item.title} - {item.numberOfTracks} Songs")
-    
+            print(green(f"Enter [{obj.index(item)}]: ") + f"{item.title} - {item.numberOfTracks} Songs")        
+
     try:
         choice = int(Printf.enter(lang))
         if(choice >= 0 and choice < len(obj)):

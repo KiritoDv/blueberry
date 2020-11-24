@@ -92,9 +92,9 @@ class Printf(object):
         tb.add_row([green(LANG.CHOICE_ENTER + " '1':"), LANG.CHOICE_LOGIN])
         tb.add_row([green(LANG.CHOICE_ENTER + " '2':"), LANG.CHOICE_SETTINGS])
         tb.add_row([green(LANG.CHOICE_ENTER + " '3':"), LANG.CHOICE_LOGOUT])
-        tb.add_row([green(LANG.CHOICE_ENTER + " '4':"), "Search song by name"])
-        #tb.add_row([green(LANG.CHOICE_ENTER + " '3':"), LANG.CHOICE_SET_ACCESS_TOKEN])
-        tb.add_row([green(LANG.CHOICE_ENTER_URLID), LANG.CHOICE_DOWNLOAD_BY_URL])
+        tb.add_row([green(LANG.CHOICE_ENTER + " '4':"), "Search by name/url/id"])
+        # tb.add_row([green(LANG.CHOICE_ENTER + " '3':"), LANG.CHOICE_SET_ACCESS_TOKEN])
+        # tb.add_row([green(LANG.CHOICE_ENTER_URLID), LANG.CHOICE_DOWNLOAD_BY_URL])
         print(tb)
         print("====================================================")
 
@@ -109,6 +109,7 @@ class Printf(object):
         tb.add_row([green(LANG.CHOICE_ENTER + " '0':"), "Track"])
         tb.add_row([green(LANG.CHOICE_ENTER + " '1':"), "Album"])
         tb.add_row([green(LANG.CHOICE_ENTER + " '2':"), "Playlist"])
+        tb.add_row([green(LANG.CHOICE_ENTER + " '3':"), "Url/ID"])
         print(tb)
         print("====================================================")
 

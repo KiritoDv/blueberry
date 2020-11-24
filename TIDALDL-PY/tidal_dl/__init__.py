@@ -264,8 +264,14 @@ def main():
             Printf.searchTypes()
 
             searchRaw = Printf.enter(LANG.PRINT_ENTER_CHOICE).strip();
-                
+
             searchType = int(re.sub('[^0-9]','', searchRaw))
+
+            if(searchType == 3):
+                searchRaw = Printf.enter("Enter a url or id: ").strip();
+                start(TOKEN, CONF, searchRaw)
+                return;
+
             field = "track" if searchType == 0 else 'album' if searchType == 1 else 'playlist'                
 
             if searchType >= 0 and searchType <= 2:
@@ -274,8 +280,6 @@ def main():
             else:
                 os.system('clear')
                 Printf.err("Invalid option!")
-        else:
-            start(TOKEN, CONF, choice)
 
 if __name__ == "__main__":
     main()
