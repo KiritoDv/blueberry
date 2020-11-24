@@ -261,7 +261,7 @@ def main():
         elif choice == 3:
             checkLogout()
         elif choice == 4:
-            Printf.searchTypes()
+            Printf.searchTypes()        
 
             searchRaw = Printf.enter(LANG.PRINT_ENTER_CHOICE).strip();
 
@@ -280,6 +280,9 @@ def main():
             else:
                 os.system('clear')
                 Printf.err("Invalid option!")
+        else:
+            os.system('clear')
+            Printf.err("Invalid option!")
 
 if __name__ == "__main__":
     main()

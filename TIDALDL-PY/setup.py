@@ -13,5 +13,5 @@ setup(
     include_package_data = True,
     platforms = "any",
     install_requires=["aigpy>=2020.11.10.0", "requests", "pycryptodome", "pydub", "prettytable"],
-    entry_points={'console_scripts': [ 'tidal-dl = tidal_dl:main', ]}
+    entry_points={'console_scripts': [ 'blueberry = tidal_dl:main', ]}
 )
