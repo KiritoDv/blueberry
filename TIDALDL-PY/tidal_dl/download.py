@@ -27,6 +27,7 @@ from tidal_dl.settings import Settings
 from tidal_dl.tidal import TidalAPI
 from tidal_dl.enum import Type, AudioQuality
 from tidal_dl.printf import Printf
+from tidal_dl.blueberry import Blueberry
 from tidal_dl.decryption import decrypt_security_token
 from tidal_dl.decryption import decrypt_file
 import sys
@@ -360,35 +361,40 @@ def playCallback(song, count, length, progress, info):
     vol = round(song.get_volume(), 2)    
     start = datetime.fromtimestamp(round((length - count) / 44)).strftime("%M:%S")
     finish = datetime.fromtimestamp(round((length) / 44)).strftime("%M:%S")
-    desc = f"{start} [{progress}] {finish} Vol: [{genVolume(vol, 10)}] {round(100 * vol)}%            ";
+    desc = f"{start} [{progress}] {finish} Vol: [{genVolume(vol, 10)}] {round(100 * vol)}%";
 
     sys.stdout.write("\r" + desc)
     sys.stdout.flush()    
 
 def stopCallback(keyl, path):
-    os.remove(path)
+    # os.remove(path)
     keyl.stop()
     os.system('clear')
 
 def on_key(song, key):
     if(key == 'dvol'):
         vol = round(song.get_volume(), 2)
-        if(vol > 0):
-            song.set_volume(vol - 0.1)
+        if(vol > 0):            
+            song.set_volume(vol - 0.1)            
+            Blueberry.sel_local_vol(vol)
     if(key == 'uvol'):
         vol = round(song.get_volume(), 2)
         if(vol <= 0.9):
             song.set_volume(vol + 0.1)
+            Blueberry.sel_local_vol(vol)
     if(key == 'play'):
         if song.is_paused(): song.play()
         else: song.pause()
     if(key == 'stop'):
         song.stop()
+    if(key == 'kill'):
+        Blueberry.set_break_status(True)
+        song.stop()
 
 def playSong(track, path):
         
     song = Strawberry(path)
-    song.load()
+    song.load()    
 
     desc = f"({track.title} - {track.album.title})"
     
@@ -397,7 +403,8 @@ def playSong(track, path):
         '<cmd_l>+<alt>+p': lambda: on_key(song, 'stop'), 
         '<cmd_l>+<alt>+[': lambda: on_key(song, 'dvol'),
         '<cmd_l>+<alt>+]': lambda: on_key(song, 'uvol'),
-    })        
+        '<cmd_l>+<alt>+i': lambda: on_key(song, 'kill'),
+    })
 
     keyl.start()
     
@@ -407,9 +414,10 @@ def playSong(track, path):
     song.stopcb = lambda x: stopCallback(keyl, path)
 
     os.system('clear')
+    song.set_vol(Blueberry.gel_local_vol())
 
     ml = 65;
-
+    print('')
     for cw in range(0, round(ml / 2 - len(desc) / 2)):
         print(" ", end='')
 
@@ -436,6 +444,9 @@ def __album__(conf, obj):
     # if conf.saveCovers:
     #    __downloadCover__(conf, obj)
     for item in tracks:
+        if(Blueberry.should_break()):
+            Blueberry.set_break_status(False)
+            break
         __downloadTrack__(conf, item, obj)
     # for item in videos:
     #    __downloadVideo__(conf, item, obj)
@@ -472,6 +483,9 @@ def __playlist__(conf, obj):
         return
 
     for index, item in enumerate(tracks):
+        if(Blueberry.should_break()):
+            Blueberry.set_break_status(False)
+            break
         mag, album = API.getAlbum(item.album.id)
         item.trackNumberOnPlaylist = index + 1
         __downloadTrack__(conf, item, album, obj)

@@ -33,6 +33,9 @@ class Strawberry():
         self.volume = vol
         strawberry.set_volume(vol);
 
+    def set_vol(self, vol):
+        self.volume = vol
+
     def canFinish(self):
         return not strawberry.running();
 
@@ -42,9 +45,13 @@ class Strawberry():
     def start(self):
         
         strawberry.init_player()
+        self.set_volume(self.volume)
+
         self.volume = strawberry.get_volume()
 
         while strawberry.running():
             self.playcb(strawberry.get_current_frames())
+        
         self.stop()
         self.stopcb(0)
+

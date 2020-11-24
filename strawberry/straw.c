@@ -53,7 +53,7 @@ static PyObject *paused(PyObject *self, PyObject *args, PyObject *kwargs){
 }
 
 static PyObject *close_player(PyObject *self, PyObject *args, PyObject *kwargs){
-    if(&device != NULL && &decoder != NULL && is_running){
+    if(is_running){
         ma_device_uninit(&device);
         ma_decoder_uninit(&decoder);
         is_running = FALSE;
@@ -82,7 +82,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
         return;
     }
 
-    ma_decoder_get_available_frames(&decoder, &current_frames);
+    ma_decoder_get_available_frames(pDecoder, &current_frames);
     if(current_frames <= 0) is_running = FALSE;
 
     if(is_paused) return;
